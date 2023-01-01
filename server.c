@@ -64,6 +64,7 @@ int main(int argc, char *argv[])
 }
 
 char* read_file(char* path);
+char* get_MIME(char* extension);
 
 /******** DOSTUFF() *********************
  There is a separate instance of this function 
@@ -99,6 +100,9 @@ void dostuff (int sock)
     file_path[path_length + strlen(content_path)] = '\0';
     // printf("%s\n", file_path);
 
+    //Get MIME corresponding to the fileextension
+    char* content_type = get_MIME(strchr(file_path, '.'));
+
 
 
     int header_len = strlen("HTTP/1.0 200 OK\nContent-Type: text/html\n\n");
@@ -131,4 +135,18 @@ char* read_file(char* path) {
     } else return NULL;
     
     return buffer;
+}
+
+char* get_MIME(char* extension) {
+    char* type;
+    if(strcmp(extension, ".html") == 0) {
+        type = malloc(10);
+        strcpy(type, "text/html");
+        type[9] = '\0';
+    } else if(strcmp(extension, ".css") == 0) {
+        type = malloc(9);
+        strcpy(type, "text/css");
+        type[8] = '\0';
+    }
+    return type;
 }
