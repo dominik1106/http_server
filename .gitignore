@@ -1,0 +1,11 @@
+*
+
+!*.*
+!*/
+
+!.gitignore
+
+!Makefile
+*.zip
+*.DS_Store
+*.dat
