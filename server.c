@@ -11,6 +11,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#define MAX_HEADER_SIZE 8192
+
 void dostuff(int); /* function prototype */
 void error(const char *msg)
 {
@@ -68,10 +70,10 @@ int main(int argc, char *argv[])
 void dostuff (int sock)
 {
    int n;
-   char buffer[256];
+   char buffer[MAX_HEADER_SIZE];
       
-   bzero(buffer,256);
-   n = read(sock,buffer,255);
+   bzero(buffer,MAX_HEADER_SIZE);
+   n = read(sock,buffer,MAX_HEADER_SIZE-1);
    if (n < 0) error("ERROR reading from socket");
    printf("Here is the message: %s\n",buffer);
    n = write(sock,"I got your message",18);
