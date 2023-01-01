@@ -62,6 +62,8 @@ int main(int argc, char *argv[])
     return 0; /* we never get here */
 }
 
+char* read_file(char* path);
+
 /******** DOSTUFF() *********************
  There is a separate instance of this function 
  for each connection.  It handles all communication
@@ -75,10 +77,48 @@ void dostuff (int sock)
    bzero(buffer,MAX_HEADER_SIZE);
    n = read(sock,buffer,MAX_HEADER_SIZE-1);
    if (n < 0) error("ERROR reading from socket");
-   printf("Here is the message: %s\n",buffer);
+   // printf("Here is the message: %s\n",buffer);
 
-    char* response = "HTTP/1.0 200 OK\nContent-Type: text/html\nContent-length: 78\n\n<html>\n<head>\n<title>HTTP</title>\n\n\n</head>\n<body>\n<p> HTTP/1.1-Demo</p>\n</body>\n</html>";
+    char* response;
+    char* content;
+    int header_len = strlen("HTTP/1.0 200 OK\nContent-Type: text/html\n\n");
+    content = read_file("./content/index.html");
+    response = malloc(header_len + strlen(content) - 1);
+    strcpy(response, "HTTP/1.0 200 OK\nContent-Type: text/html\n\n");
+    printf("%s\n", response);
+    strcpy(response+header_len, content);
+    
 
-   n = write(sock,response,strlen(response));
-   if (n < 0) error("ERROR writing to socket");
+    // char* response = "HTTP/1.0 200 OK";
+    // char* response = "HTTP/1.0 200 OK\nContent-Type: text/html\nContent-length: 78\n\n<html>\n<head>\n<title>HTTP</title>\n\n\n</head>\n<body>\n<p> HTTP/1.1-Demo</p>\n</body>\n</html>";
+
+    n = write(sock,response,strlen(response));
+    if (n < 0) error("ERROR writing to socket");
+}
+
+char* read_file(char* path) {
+    char* buffer;
+    int length;
+    FILE* f = fopen(path, "rb");
+    if(f) {
+        fseek(f, 0, SEEK_END);
+        length = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        buffer = malloc(length + 1);
+        if(buffer != NULL) {
+            printf("Buffer allocated!\n");
+            fread(buffer, 1, length, f);
+        }
+        fclose(f);
+        buffer[length] = '\0';
+    } else return NULL;
+
+    if(buffer) {
+        // if(strstr(path, ".html") != NULL) {
+        // } else {
+        // }
+
+        printf("First character: %c\n", buffer[0]);
+    }
+    return buffer;
 }
