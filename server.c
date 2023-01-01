@@ -76,6 +76,9 @@ void dostuff (int sock)
    n = read(sock,buffer,MAX_HEADER_SIZE-1);
    if (n < 0) error("ERROR reading from socket");
    printf("Here is the message: %s\n",buffer);
-   n = write(sock,"I got your message",18);
+
+    char* response = "HTTP/1.0 200 OK\nContent-Type: text/html\nContent-length: 78\n\n<html>\n<head>\n<title>HTTP</title>\n\n\n</head>\n<body>\n<p> HTTP/1.1-Demo</p>\n</body>\n</html>";
+
+   n = write(sock,response,strlen(response));
    if (n < 0) error("ERROR writing to socket");
 }
