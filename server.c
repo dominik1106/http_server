@@ -12,7 +12,8 @@
 #include <netinet/in.h>
 
 #define MAX_HEADER_SIZE 8192
-const char* content_path = "./content/";
+const char* CONTENT_PATH = "./content/";
+const char* HTTP_VERSION = "HTTP/1.0";
 
 void dostuff(int); /* function prototype */
 void error(const char *msg)
@@ -79,7 +80,7 @@ void dostuff (int sock)
     bzero(buffer,MAX_HEADER_SIZE);
     n = read(sock,buffer,MAX_HEADER_SIZE-1);
     if (n < 0) error("ERROR reading from socket");
-    // printf("Here is the message: %s\n",buffer);
+    // printf("Request:\n%s\n",buffer);
 
     //No support for any http types except GET right now
     if(strncmp(buffer, "GET", 3) != 0) {
@@ -93,29 +94,48 @@ void dostuff (int sock)
     end = strchr(start, ' ');
     int path_length = end - start;
 
+
     //Concat the static ./content/ location to the filename
-    char* file_path = malloc(path_length + strlen(content_path));
-    strcpy(file_path, content_path);
-    strncpy(file_path + strlen(content_path), start, path_length);
-    file_path[path_length + strlen(content_path)] = '\0';
-    // printf("%s\n", file_path);
+    char* file_path = malloc(path_length + strlen(CONTENT_PATH) + 1);
+    strcpy(file_path, CONTENT_PATH);
+    strncpy((file_path + strlen(CONTENT_PATH)), start, path_length);
+    file_path[path_length + strlen(CONTENT_PATH)] = '\0';
 
     //Get MIME corresponding to the fileextension
-    char* content_type = get_MIME(strchr(file_path, '.'));
+    char* content_type = get_MIME(strrchr(file_path, '.'));
+    // printf("Test %s", strrchr(file_path, '.'));
 
-
-
-    int header_len = strlen("HTTP/1.0 200 OK\nContent-Type: text/html\n\n");
     char* content = read_file(file_path);
-    char* response = malloc(header_len + strlen(content) - 1);
-    strcpy(response, "HTTP/1.0 200 OK\nContent-Type: text/html\n\n");
-    strcpy(response+header_len, content);
+    if(content == NULL) {
+        n = write(sock,"HTTP/1.0 404",strlen("HTTP/1.0 404"));
+        if (n < 0) error("ERROR writing to socket");
+        return;
+    }
+
+    int response_length = strlen("HTTP/1.0 200 OK\nContent-Type: ") + strlen(content_type) + strlen(content) + 3;
+    char* response = malloc(response_length);
+    start = response;
+    
+    strcpy(response, "HTTP/1.0 200 OK\nContent-Type: ");
+    response += strlen("HTTP/1.0 200 OK\nContent-Type: ");
+    strcpy(response, content_type);
+    response += strlen(content_type);
+    *(response++) = '\n';
+    *(response++) = '\n';
+    strcpy(response, content);
+    response += strlen(content);
+    *response = '\0';
+    response = start;
 
     n = write(sock,response,strlen(response));
     if (n < 0) error("ERROR writing to socket");
 
-    free(buffer);
+    printf("%s\n", response);
+
     free(file_path);
+    free(content);
+    free(content_type);
+    free(response);
 }
 
 char* read_file(char* path) {
@@ -147,6 +167,10 @@ char* get_MIME(char* extension) {
         type = malloc(9);
         strcpy(type, "text/css");
         type[8] = '\0';
+    } else {
+        type = malloc(11);
+        strcpy(type, "text/plain");
+        type[10] = '\0';
     }
     return type;
 }
