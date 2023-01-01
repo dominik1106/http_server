@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 
 #define MAX_HEADER_SIZE 8192
+const char* content_path = "./content/";
 
 void dostuff(int); /* function prototype */
 void error(const char *msg)
@@ -71,29 +72,46 @@ char* read_file(char* path);
  *****************************************/
 void dostuff (int sock)
 {
-   int n;
-   char buffer[MAX_HEADER_SIZE];
+    int n;
+    char buffer[MAX_HEADER_SIZE];
       
-   bzero(buffer,MAX_HEADER_SIZE);
-   n = read(sock,buffer,MAX_HEADER_SIZE-1);
-   if (n < 0) error("ERROR reading from socket");
-   // printf("Here is the message: %s\n",buffer);
+    bzero(buffer,MAX_HEADER_SIZE);
+    n = read(sock,buffer,MAX_HEADER_SIZE-1);
+    if (n < 0) error("ERROR reading from socket");
+    // printf("Here is the message: %s\n",buffer);
 
-    char* response;
-    char* content;
+    //No support for any http types except GET right now
+    if(strncmp(buffer, "GET", 3) != 0) {
+        n = write(sock, "HTTP/1.0 404 Not found", strlen("HTTP/1.0 404 Not found"));
+        if (n < 0) error("ERROR writing to socket");
+    }
+
+    //Get the filename
+    char* start; char* end;
+    start = strchr(buffer, '/')+1;
+    end = strchr(start, ' ');
+    int path_length = end - start;
+
+    //Concat the static ./content/ location to the filename
+    char* file_path = malloc(path_length + strlen(content_path));
+    strcpy(file_path, content_path);
+    strncpy(file_path + strlen(content_path), start, path_length);
+    file_path[path_length + strlen(content_path)] = '\0';
+    // printf("%s\n", file_path);
+
+
+
     int header_len = strlen("HTTP/1.0 200 OK\nContent-Type: text/html\n\n");
-    content = read_file("./content/index.html");
-    response = malloc(header_len + strlen(content) - 1);
+    char* content = read_file(file_path);
+    char* response = malloc(header_len + strlen(content) - 1);
     strcpy(response, "HTTP/1.0 200 OK\nContent-Type: text/html\n\n");
-    printf("%s\n", response);
     strcpy(response+header_len, content);
-    
-
-    // char* response = "HTTP/1.0 200 OK";
-    // char* response = "HTTP/1.0 200 OK\nContent-Type: text/html\nContent-length: 78\n\n<html>\n<head>\n<title>HTTP</title>\n\n\n</head>\n<body>\n<p> HTTP/1.1-Demo</p>\n</body>\n</html>";
 
     n = write(sock,response,strlen(response));
     if (n < 0) error("ERROR writing to socket");
+
+    free(buffer);
+    free(file_path);
 }
 
 char* read_file(char* path) {
@@ -106,19 +124,11 @@ char* read_file(char* path) {
         fseek(f, 0, SEEK_SET);
         buffer = malloc(length + 1);
         if(buffer != NULL) {
-            printf("Buffer allocated!\n");
             fread(buffer, 1, length, f);
         }
         fclose(f);
         buffer[length] = '\0';
     } else return NULL;
-
-    if(buffer) {
-        // if(strstr(path, ".html") != NULL) {
-        // } else {
-        // }
-
-        printf("First character: %c\n", buffer[0]);
-    }
+    
     return buffer;
 }
